@@ -1,0 +1,1836 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>星淵迴響：2184 | AETHER ECHO: 2184</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js (3D 渲染核心) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Font Awesome (科幻圖示) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Orbitron & Noto Sans TC & JetBrains Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+TC:wght@300;400;700;900&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                        cyber: ['"Orbitron"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        cyber: {
+                            bg: '#04070D',
+                            panel: 'rgba(10, 18, 32, 0.78)',
+                            cyan: '#00F0FF',
+                            magenta: '#FF0055',
+                            amber: '#FFB800',
+                            purple: '#9D4EDD'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* 全域科幻基礎樣式 */
+        body {
+            background-color: #04070D;
+            color: #E2E8F0;
+            overflow-x: hidden;
+        }
+
+        /* 自訂捲軸 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #04070D; }
+        ::-webkit-scrollbar-thumb { background: #00F0FF; border-radius: 3px; }
+
+        /* 全息掃描線覆蓋層 */
+        .scanlines {
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0,240,255,0.03) 50%,
+                rgba(0,240,255,0.03)
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+        }
+
+        /* 科幻切角邊框 */
+        .cyber-clip {
+            clip-path: polygon(
+                0 12px, 12px 0, 
+                100% 0, 100% calc(100% - 12px), 
+                calc(100% - 12px) 100%, 0 100%
+            );
+        }
+        .cyber-clip-sm {
+            clip-path: polygon(
+                0 6px, 6px 0, 
+                100% 0, 100% calc(100% - 6px), 
+                calc(100% - 6px) 100%, 0 100%
+            );
+        }
+
+        /* 故障藝術 (Glitch) 文字動畫 */
+        .glitch-text {
+            position: relative;
+            text-shadow: 0.05em 0 0 rgba(255, 0, 85, 0.75),
+                        -0.025em -0.05em 0 rgba(0, 240, 255, 0.75);
+            animation: glitch 2.5s infinite;
+        }
+
+        @keyframes glitch {
+            0%, 90%, 100% {
+                text-shadow: 0.05em 0 0 rgba(255, 0, 85, 0.75), -0.025em -0.05em 0 rgba(0, 240, 255, 0.75);
+                transform: translate(0);
+            }
+            92% {
+                text-shadow: -0.05em -0.025em 0 rgba(255, 0, 85, 0.9), 0.025em 0.025em 0 rgba(0, 240, 255, 0.9);
+                transform: translate(-2px, 1px);
+            }
+            94% {
+                text-shadow: 0.05em 0.025em 0 rgba(255, 0, 85, 0.9), -0.05em -0.025em 0 rgba(0, 240, 255, 0.9);
+                transform: translate(2px, -1px);
+            }
+            96% {
+                text-shadow: -0.025em 0 0 rgba(255, 0, 85, 0.75), 0.025em 0.05em 0 rgba(0, 240, 255, 0.75);
+                transform: translate(0);
+            }
+        }
+
+        /* 霓虹發光效果 */
+        .glow-cyan { box-shadow: 0 0 20px rgba(0, 240, 255, 0.25); }
+        .glow-magenta { box-shadow: 0 0 20px rgba(255, 0, 85, 0.3); }
+
+        /* 滾動進場動畫狀態 */
+        .reveal-node {
+            opacity: 0;
+            transform: translateY(35px);
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .reveal-node.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 3D 畫布容器游標 */
+        .canvas-interactive {
+            cursor: grab;
+            touch-action: none;
+        }
+        .canvas-interactive:active {
+            cursor: grabbing;
+        }
+
+        /* 音頻聲波跳動動畫 */
+        @keyframes eqBar {
+            0%, 100% { height: 20%; }
+            50% { height: 100%; }
+        }
+        .eq-bar {
+            animation: eqBar 0.8s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-cyan-400 selection:text-slate-950">
+
+    <!-- 全螢幕細微掃描線質感 -->
+    <div class="fixed inset-0 scanlines z-50"></div>
+
+    <!-- 頂部浮動科幻導覽列 -->
+    <header class="fixed top-0 left-0 right-0 z-40 bg-slate-950/80 backdrop-blur-md border-b border-cyan-500/20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- 品牌標誌 -->
+            <a href="#hero" class="flex items-center space-x-3 group">
+                <div class="w-8 h-8 rounded bg-cyan-500/10 border border-cyan-400 flex items-center justify-center group-hover:bg-cyan-400 group-hover:text-slate-950 transition">
+                    <i class="fa-solid fa-atom text-cyan-400 group-hover:text-slate-950"></i>
+                </div>
+                <div>
+                    <span class="font-cyber font-bold tracking-wider text-white text-sm sm:text-base">AETHER ECHO</span>
+                    <span class="text-xs font-mono text-cyan-400 block -mt-1">SYS.2184 // ONLINE</span>
+                </div>
+            </a>
+
+            <!-- 桌面版導覽連結 -->
+            <nav class="hidden md:flex items-center space-x-6 text-xs font-mono tracking-widest">
+                <a href="#world" class="text-slate-300 hover:text-cyan-400 transition">01.世界觀地圖</a>
+                <a href="#characters" class="text-slate-300 hover:text-cyan-400 transition">02.3D角色與武器</a>
+                <a href="#story" class="text-slate-300 hover:text-cyan-400 transition">03.故事章節</a>
+                <a href="#scenes" class="text-slate-300 hover:text-cyan-400 transition">04.3D場景探索</a>
+                <a href="#finale" class="text-slate-300 hover:text-cyan-400 transition">05.神經連結</a>
+            </nav>
+
+            <!-- 音效與快速啟動按鈕 -->
+            <div class="flex items-center space-x-3">
+                <button id="audioToggleBtn" onclick="toggleAmbientSound()" class="px-3 py-1.5 rounded border border-slate-700 hover:border-cyan-400 text-xs font-mono text-slate-300 flex items-center space-x-2 transition" title="切換科幻合成環境音">
+                    <i id="audioIcon" class="fa-solid fa-volume-xmark text-rose-500"></i>
+                    <span class="hidden sm:inline" id="audioLabel">AUDIO: OFF</span>
+                </button>
+                <a href="#finale" class="px-4 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs font-mono tracking-wider rounded transition shadow-[0_0_15px_rgba(0,240,255,0.4)]">
+                    立即潛入
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- =====================================================================
+         SECTION 01: 首頁啟動區 (HERO SECTION + 3D 軌道都市背景)
+    ====================================================================== -->
+    <section id="hero" class="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
+        <!-- 3D 首頁背景容器 -->
+        <div id="hero-canvas-container" class="absolute inset-0 z-0"></div>
+        <!-- 漸層遮罩確保文字清晰 -->
+        <div class="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-slate-950/30 to-[#04070D] z-10 pointer-events-none"></div>
+
+        <div class="relative z-20 max-w-5xl mx-auto px-4 sm:px-6 text-center">
+            <!-- 頂部狀態標籤 -->
+            <div class="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-cyan-950/60 border border-cyan-500/40 text-cyan-300 font-mono text-xs mb-6 backdrop-blur-sm">
+                <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                <span>GAIA MATRIX NEURAL LINK // 算力同步率 98.4%</span>
+            </div>
+
+            <!-- 主視覺標題 -->
+            <h1 class="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-white mb-4 glitch-text">
+                星淵迴響：<span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-rose-500 font-cyber">2184</span>
+            </h1>
+            <p class="font-cyber text-sm sm:text-lg tracking-[0.3em] text-cyan-400/90 uppercase mb-6">
+                AETHER ECHO : NEO-KOWLOON SKYPORT
+            </p>
+
+            <!-- 世界觀核心簡介 -->
+            <p class="max-w-2xl mx-auto text-slate-300 text-base sm:text-lg leading-relaxed mb-10 bg-slate-950/50 backdrop-blur-sm p-4 rounded-xl border border-slate-800/80">
+                2184 年，記憶成為唯一流通的貨幣。當一場「靜默脈衝」撕裂中央神經網路，數百萬人的意識碎片具象化為致命幻象。身為<span class="text-cyan-400 font-bold">記憶潛行者</span>，你將深入垂直巨構都市「新九龍浮空城」，在靈魂格式化前奪回創世代碼。
+            </p>
+
+            <!-- 進入世界探索按鈕組 -->
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <button onclick="enterWorldSequence()" class="group relative px-8 py-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-base tracking-wider rounded-lg transition-all duration-300 shadow-[0_0_30px_rgba(0,240,255,0.5)] flex items-center space-x-3">
+                    <span>進入世界開始探索</span>
+                    <i class="fa-solid fa-chevron-right group-hover:translate-x-1 transition-transform"></i>
+                </button>
+                <a href="#characters" class="px-8 py-4 bg-slate-900/80 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 font-mono text-sm tracking-wider rounded-lg transition backdrop-blur-md flex items-center space-x-2">
+                    <i class="fa-solid fa-cube"></i>
+                    <span>檢視 3D 角色與義體</span>
+                </a>
+            </div>
+
+            <!-- 底部捲動提示 -->
+            <div class="mt-16 flex flex-col items-center text-slate-400 font-mono text-xs animate-bounce">
+                <span>SCROLL OR DRAG 3D SPACE</span>
+                <i class="fa-solid fa-angles-down mt-2 text-cyan-400"></i>
+            </div>
+        </div>
+    </section>
+
+    <!-- =====================================================================
+         SECTION 02: 世界觀介紹 & 3D 互動世界地圖 (WORLD & 3D HOLO-MAP)
+    ====================================================================== -->
+    <section id="world" class="relative py-24 border-t border-cyan-900/40 bg-gradient-to-b from-[#04070D] via-[#070D19] to-[#04070D]">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- 區塊標題 -->
+            <div class="reveal-node mb-12">
+                <div class="flex items-center space-x-2 text-cyan-400 font-mono text-xs tracking-widest mb-2">
+                    <span>// SECTOR 01 : WORLD ARCHIVES & 3D TOPOGRAPHY</span>
+                </div>
+                <h2 class="text-3xl sm:text-4xl font-black text-white">世界觀檔案與 <span class="text-cyan-400">3D 浮空城全息地圖</span></h2>
+                <p class="text-slate-400 mt-2 max-w-2xl">拖曳旋轉 3D 建築群、滾輪縮放視角，並點擊發光全息節點以解析新九龍浮空城的三層階級結構與歷史危機。</p>
+            </div>
+
+            <!-- 世界三大運作規則卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 reveal-node">
+                <div class="bg-slate-900/70 border border-cyan-500/20 p-6 rounded-xl cyber-clip hover:border-cyan-400/60 transition">
+                    <div class="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-400/40 flex items-center justify-center text-cyan-400 mb-4">
+                        <i class="fa-solid fa-coins"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">規則 I：記憶即貨幣</h3>
+                    <p class="text-sm text-slate-400 leading-relaxed">實體貨幣已廢除，人類的情感記憶與技能可被提取為「神經代幣」。底層民眾被迫典當童年與痛覺以換取氧氣配額。</p>
+                </div>
+
+                <div class="bg-slate-900/70 border border-rose-500/20 p-6 rounded-xl cyber-clip hover:border-rose-400/60 transition">
+                    <div class="w-10 h-10 rounded-lg bg-rose-500/10 border border-rose-400/40 flex items-center justify-center text-rose-400 mb-4">
+                        <i class="fa-solid fa-layer-group"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">規則 II：算力階級隔離</h3>
+                    <p class="text-sm text-slate-400 leading-relaxed">城市依大腦與「蓋亞矩陣」的同步率垂直劃分：雲端永生的天穹特權區、霓虹商業帶，以及失去記憶的廢鐵深淵。</p>
+                </div>
+
+                <div class="bg-slate-900/70 border border-amber-500/20 p-6 rounded-xl cyber-clip hover:border-amber-400/60 transition">
+                    <div class="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-400/40 flex items-center justify-center text-amber-400 mb-4">
+                        <i class="fa-solid fa-bolt"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">規則 III：實體全息化</h3>
+                    <p class="text-sm text-slate-400 leading-relaxed">「靜默脈衝」風暴後，溢散的數據具備高密度電磁實體特性，過往災難記憶與失控防禦機甲會具象化並造成物理傷害。</p>
+                </div>
+            </div>
+
+            <!-- 3D 互動地圖與歷史時間軸主面板 -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch reveal-node">
+                <!-- 左側：3D 世界地圖畫布 (7 欄) -->
+                <div class="lg:col-span-7 relative bg-slate-950 rounded-2xl border border-cyan-500/30 overflow-hidden min-h-[440px] flex flex-col justify-between glow-cyan">
+                    <!-- 頂部 HUD 狀態列 -->
+                    <div class="relative z-10 p-4 flex flex-wrap items-center justify-between gap-2 bg-gradient-to-b from-slate-950/90 to-transparent pointer-events-none">
+                        <div class="font-mono text-xs text-cyan-400">
+                            <i class="fa-solid fa-satellite-dish mr-1 animate-pulse"></i> HOLO-MAP // NEO-KOWLOON 3D
+                        </div>
+                        <div class="flex space-x-2 pointer-events-auto">
+                            <button onclick="toggleMapWireframe()" id="mapWireframeBtn" class="px-3 py-1 rounded bg-slate-900/90 border border-cyan-500/40 text-xs font-mono text-cyan-300 hover:bg-cyan-500 hover:text-slate-950 transition">
+                                切換全息線框
+                            </button>
+                            <button onclick="resetMapCamera()" class="px-3 py-1 rounded bg-slate-900/90 border border-slate-700 text-xs font-mono text-slate-300 hover:border-cyan-400 transition">
+                                重置視角
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Three.js 地圖渲染區 -->
+                    <div id="world-map-canvas" class="absolute inset-0 canvas-interactive"></div>
+
+                    <!-- 底部快速區域切換按鈕 -->
+                    <div class="relative z-10 p-4 bg-gradient-to-t from-slate-950/95 via-slate-950/70 to-transparent">
+                        <div class="text-[11px] font-mono text-slate-400 mb-2">點擊 3D 建築節點或選擇區域進行掃描：</div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="focusMapZone(0)" id="zoneBtn-0" class="zone-tab px-3 py-2 rounded-lg bg-cyan-500/20 border border-cyan-400 text-xs font-bold text-white text-left transition">
+                                <span class="block text-[10px] font-mono text-cyan-300">ALT: +3000M</span>
+                                上層：天穹聖殿
+                            </button>
+                            <button onclick="focusMapZone(1)" id="zoneBtn-1" class="zone-tab px-3 py-2 rounded-lg bg-slate-900/80 border border-slate-700 hover:border-cyan-400 text-xs font-bold text-slate-300 text-left transition">
+                                <span class="block text-[10px] font-mono text-rose-400">ALT: +1200M</span>
+                                中層：霓虹商業帶
+                            </button>
+                            <button onclick="focusMapZone(2)" id="zoneBtn-2" class="zone-tab px-3 py-2 rounded-lg bg-slate-900/80 border border-slate-700 hover:border-cyan-400 text-xs font-bold text-slate-300 text-left transition">
+                                <span class="block text-[10px] font-mono text-amber-400">ALT: -400M</span>
+                                底層：廢鐵深淵
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右側：區域詳情與歷史事件軸 (5 欄) -->
+                <div class="lg:col-span-5 flex flex-col justify-between gap-6">
+                    <!-- 動態區域情報面板 -->
+                    <div class="bg-slate-900/80 border border-cyan-500/30 rounded-2xl p-6 cyber-clip flex-1">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                            <span id="zoneTag" class="px-2.5 py-0.5 rounded text-xs font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-400/40">TIER-1 雲端特權區</span>
+                            <span id="zoneDanger" class="text-xs font-mono text-emerald-400">危險指數：LOW (18%)</span>
+                        </div>
+                        <h3 id="zoneTitle" class="text-2xl font-black text-white mb-2">上層：天穹聖殿 (Aether Spire)</h3>
+                        <p id="zoneDesc" class="text-sm text-slate-300 leading-relaxed mb-4">
+                            懸浮於平流層邊緣的純白軌道建築群，中央神經塔「蓋亞核心」所在地。這裡的居民已將 99% 的意識上傳雲端，肉體沉睡於恆溫維生艙中，享受無盡的數位永生。
+                        </p>
+                        <div class="bg-slate-950/80 rounded-xl p-3.5 border border-slate-800 space-y-2 text-xs font-mono">
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">主要控制勢力：</span>
+                                <span id="zoneFaction" class="text-cyan-300">天穹議會 / 蓋亞防衛局</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">關鍵探索目標：</span>
+                                <span id="zoneObjective" class="text-amber-300">創世代碼主伺服器</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 世界歷史大事件軸 -->
+                    <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
+                        <h4 class="font-mono text-xs text-cyan-400 tracking-wider mb-4 flex items-center">
+                            <i class="fa-solid fa-clock-rotate-left mr-2"></i> 歷史紀年檔案 (TIMELINE)
+                        </h4>
+                        <div class="space-y-4 border-l-2 border-cyan-500/30 pl-4 ml-1">
+                            <div class="relative">
+                                <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 absolute -left-[21px] top-1"></span>
+                                <span class="text-xs font-mono text-cyan-400">2142 A.D. // 蓋亞矩陣啟動</span>
+                                <p class="text-xs text-slate-300 mt-0.5">全球海平面上升淹沒沿海城市，人類遷入垂直巨構「新九龍浮空城」，意識數位化技術正式商業化。</p>
+                            </div>
+                            <div class="relative">
+                                <span class="w-2.5 h-2.5 rounded-full bg-amber-400 absolute -left-[21px] top-1"></span>
+                                <span class="text-xs font-mono text-amber-400">2169 A.D. // 記憶交易法頒布</span>
+                                <p class="text-xs text-slate-300 mt-0.5">記憶正式取代貨幣，造成嚴重的算力貧富差距，底層出現大量失去自我的「空殼人」。</p>
+                            </div>
+                            <div class="relative">
+                                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 absolute -left-[21px] top-1 animate-ping"></span>
+                                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 absolute -left-[21px] top-1"></span>
+                                <span class="text-xs font-mono text-rose-400">2184 A.D. // 靜默脈衝風暴 (現在)</span>
+                                <p class="text-xs text-slate-300 mt-0.5">未知電磁風暴摧毀矩陣防火牆，記憶碎片實體化暴走，潛行者奉命潛入回收創世代碼。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =====================================================================
+         SECTION 03: 3D 角色與武器展示庫 (3D CHARACTER, POSE, EXPRESSION & WEAPON)
+    ====================================================================== -->
+    <section id="characters" class="relative py-24 border-t border-cyan-900/40 bg-[#04070D]">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- 區塊標題 -->
+            <div class="reveal-node mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <div class="text-rose-400 font-mono text-xs tracking-widest mb-2">// SECTOR 02 : NEURAL OPERATIVES & 3D ARSENAL</div>
+                    <h2 class="text-3xl sm:text-4xl font-black text-white">3D 角色檔案與 <span class="text-rose-500">義體武器互動庫</span></h2>
+                </div>
+                <!-- 人物切換按鈕列 -->
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="selectCharacter(0)" id="charSelect-0" class="char-btn px-4 py-2.5 rounded-lg bg-cyan-500 text-slate-950 font-bold text-xs font-mono transition shadow-[0_0_15px_rgba(0,240,255,0.4)]">
+                        01. 零 ZERO (神經駭客)
+                    </button>
+                    <button onclick="selectCharacter(1)" id="charSelect-1" class="char-btn px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:border-rose-400 font-bold text-xs font-mono transition">
+                        02. 凱恩 KAINE (重裝傭兵)
+                    </button>
+                    <button onclick="selectCharacter(2)" id="charSelect-2" class="char-btn px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:border-purple-400 font-bold text-xs font-mono transition">
+                        03. 艾拉 LYRA (記憶修復師)
+                    </button>
+                </div>
+            </div>
+
+            <!-- 主互動區：左側 3D 模型舞台 + 右側角色資料與姿勢/表情/武器控制 -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch reveal-node">
+                
+                <!-- 左側：3D 角色與武器展示舞台 (7 欄) -->
+                <div class="lg:col-span-7 relative bg-gradient-to-b from-slate-900/90 to-slate-950 rounded-2xl border border-slate-700/80 overflow-hidden min-h-[500px] flex flex-col justify-between">
+                    <!-- 頂部狀態與展示模式切換 -->
+                    <div class="relative z-10 p-4 flex flex-wrap items-center justify-between gap-2 bg-slate-950/70 backdrop-blur-sm border-b border-slate-800">
+                        <div class="flex items-center space-x-2">
+                            <span id="charCodeBadge" class="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono text-xs border border-cyan-500/40">UNIT // Z-01</span>
+                            <span class="text-xs font-mono text-slate-400 hidden sm:inline">拖曳 360° 旋轉檢視模型</span>
+                        </div>
+                        <!-- 切換「3D 角色全身」或「3D 專屬武器特寫」 -->
+                        <div class="flex rounded-lg bg-slate-900 p-1 border border-slate-700">
+                            <button onclick="setShowcaseMode('character')" id="modeCharBtn" class="px-3 py-1 rounded text-xs font-mono font-bold bg-cyan-500 text-slate-950 transition">
+                                <i class="fa-solid fa-user-astronaut mr-1"></i>3D 角色模型
+                            </button>
+                            <button onclick="setShowcaseMode('weapon')" id="modeWeaponBtn" class="px-3 py-1 rounded text-xs font-mono font-bold text-slate-300 hover:text-white transition">
+                                <i class="fa-solid fa-gun mr-1"></i>3D 專屬武器
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Three.js 角色/武器渲染畫布 -->
+                    <div id="character-canvas" class="absolute inset-0 canvas-interactive"></div>
+
+                    <!-- 底部：角色姿勢與表情即時控制器 -->
+                    <div class="relative z-10 p-4 bg-slate-950/85 backdrop-blur-md border-t border-slate-800 space-y-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <!-- 姿勢動作控制 -->
+                            <div>
+                                <span class="block text-[11px] font-mono text-cyan-400 mb-1.5"><i class="fa-solid fa-person-rays mr-1"></i>姿勢變化 (POSE ANIMATION)：</span>
+                                <div class="grid grid-cols-3 gap-1.5">
+                                    <button onclick="setCharPose('idle')" id="pose-idle" class="pose-btn py-1.5 px-2 rounded bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-xs font-mono font-bold transition">待機警戒</button>
+                                    <button onclick="setCharPose('combat')" id="pose-combat" class="pose-btn py-1.5 px-2 rounded bg-slate-900 border border-slate-700 text-slate-300 hover:border-cyan-400 text-xs font-mono transition">戰鬥舉武</button>
+                                    <button onclick="setCharPose('hack')" id="pose-hack" class="pose-btn py-1.5 px-2 rounded bg-slate-900 border border-slate-700 text-slate-300 hover:border-cyan-400 text-xs font-mono transition">神經駭入</button>
+                                </div>
+                            </div>
+                            <!-- 表情與護目鏡發光狀態控制 -->
+                            <div>
+                                <span class="block text-[11px] font-mono text-rose-400 mb-1.5"><i class="fa-solid fa-face-grimace mr-1"></i>表情神態 (EXPRESSION / VISOR)：</span>
+                                <div class="grid grid-cols-3 gap-1.5">
+                                    <button onclick="setCharExpression('calm')" id="expr-calm" class="expr-btn py-1.5 px-2 rounded bg-rose-500/20 border border-rose-400 text-rose-300 text-xs font-mono font-bold transition">冷靜分析</button>
+                                    <button onclick="setCharExpression('overdrive')" id="expr-overdrive" class="expr-btn py-1.5 px-2 rounded bg-slate-900 border border-slate-700 text-slate-300 hover:border-rose-400 text-xs font-mono transition">過載憤怒</button>
+                                    <button onclick="setCharExpression('glitch')" id="expr-glitch" class="expr-btn py-1.5 px-2 rounded bg-slate-900 border border-slate-700 text-slate-300 hover:border-rose-400 text-xs font-mono transition">記憶干擾</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右側：角色詳細資料、背景故事與能力數值 (5 欄) -->
+                <div class="lg:col-span-5 bg-slate-900/80 border border-slate-800 rounded-2xl p-6 cyber-clip flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span id="charRole" class="text-xs font-mono text-cyan-400 tracking-widest uppercase">NEURAL INFILTRATOR // 神經潛行駭客</span>
+                            <span id="charSyncRate" class="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 text-emerald-400">同步率 96%</span>
+                        </div>
+                        <h3 id="charName" class="text-3xl font-black text-white mb-1">零 (ZERO)</h3>
+                        <p id="charQuote" class="text-xs font-mono text-slate-400 italic mb-5">「記憶不會說謊，但寫入記憶的人會。」</p>
+
+                        <!-- 背景故事 -->
+                        <div class="mb-6">
+                            <h4 class="text-xs font-mono text-slate-400 uppercase tracking-wider mb-2 border-b border-slate-800 pb-1">背景檔案 // BIOGRAPHY</h4>
+                            <p id="charBio" class="text-sm text-slate-300 leading-relaxed">
+                                前蓋亞矩陣安全架構師，在「靜默脈衝」當晚為保護機密數據而自行切斷雲端連結，導致左半身嚴重神經燒傷並換裝軍用級義體。如今在黑市接取高風險記憶回收委託，尋找自己被抹除的過去。
+                            </p>
+                        </div>
+
+                        <!-- 專屬武器與道具情報 -->
+                        <div class="mb-6 bg-slate-950/80 p-4 rounded-xl border border-slate-800">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-xs font-mono text-amber-400"><i class="fa-solid fa-crosshairs mr-1"></i>專屬武裝與核心道具</span>
+                                <button onclick="setShowcaseMode('weapon')" class="text-[11px] font-mono text-cyan-400 hover:underline">切換 3D 檢視 →</button>
+                            </div>
+                            <div id="charWeaponName" class="text-base font-bold text-white">「幽靈弦」高頻電漿刃 & 神經提取器</div>
+                            <p id="charWeaponDesc" class="text-xs text-slate-400 mt-1">可切開高密度實體全息投影，並直接從失控機體中抽取未損毀的創世代碼碎片。</p>
+                        </div>
+                    </div>
+
+                    <!-- 角色能力屬性條 -->
+                    <div>
+                        <h4 class="text-xs font-mono text-slate-400 uppercase tracking-wider mb-3 border-b border-slate-800 pb-1">能力屬性評估 // ATTRIBUTES</h4>
+                        <div class="space-y-3 text-xs font-mono">
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span class="text-slate-300">神經駭入算力 (HACKING)</span>
+                                    <span id="statVal1" class="text-cyan-400">95 / 100</span>
+                                </div>
+                                <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                                    <div id="statBar1" class="bg-gradient-to-r from-cyan-500 to-sky-400 h-full transition-all duration-500" style="width: 95%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span class="text-slate-300">近戰與火力輸出 (COMBAT)</span>
+                                    <span id="statVal2" class="text-rose-400">72 / 100</span>
+                                </div>
+                                <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                                    <div id="statBar2" class="bg-gradient-to-r from-rose-500 to-pink-500 h-full transition-all duration-500" style="width: 72%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span class="text-slate-300">義體機動與潛行 (AGILITY)</span>
+                                    <span id="statVal3" class="text-amber-400">90 / 100</span>
+                                </div>
+                                <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                                    <div id="statBar3" class="bg-gradient-to-r from-amber-500 to-yellow-400 h-full transition-all duration-500" style="width: 90%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =====================================================================
+         SECTION 04: 故事探索 (SCROLL EFFECT 敘事體驗 + 互動影音解碼終端)
+    ====================================================================== -->
+    <section id="story" class="relative py-24 border-t border-cyan-900/40 bg-gradient-to-b from-[#04070D] via-[#090D1C] to-[#04070D]">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- 區塊標題 -->
+            <div class="text-center max-w-3xl mx-auto mb-16 reveal-node">
+                <div class="text-purple-400 font-mono text-xs tracking-widest mb-2">// SECTOR 03 : INTERACTIVE NARRATIVE & MEMORY LOGS</div>
+                <h2 class="text-3xl sm:text-4xl font-black text-white">故事章節與 <span class="text-purple-400">記憶碎片解碼</span></h2>
+                <p class="text-slate-400 mt-3 text-sm sm:text-base">向下滾動推進劇情時間軸，點擊章節內的「解密通訊錄音」以啟動動態聲波與機密畫面。</p>
+            </div>
+
+            <!-- 滾動敘事時間線容器 -->
+            <div class="relative space-y-16">
+                <!-- 中央發光敘事軸線 (桌面版) -->
+                <div class="hidden md:block absolute left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-cyan-500 via-purple-500 to-rose-500 -translate-x-1/2 opacity-40"></div>
+
+                <!-- 第一章：序章 -->
+                <div class="reveal-node relative grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                    <div class="md:text-right md:pr-10">
+                        <span class="inline-block px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/40 text-cyan-300 font-mono text-xs mb-3">CHAPTER 01 // 脈衝之夜</span>
+                        <h3 class="text-2xl font-bold text-white mb-3">防火牆崩潰的 0.04 秒</h3>
+                        <p class="text-sm text-slate-300 leading-relaxed mb-4">
+                            2184 年 11 月 17 日，一道來自近地軌道的不明高能電磁波擊中了天穹聖殿。蓋亞矩陣的記憶隔離協議瞬間失效，數百萬人的恐懼、愛戀與機密記憶化為實體全息風暴席捲全城。
+                        </p>
+                        <button onclick="playStoryTransmission(0)" class="inline-flex items-center space-x-2 px-4 py-2 rounded-lg bg-slate-900 hover:bg-cyan-500/20 border border-cyan-500/50 text-cyan-300 text-xs font-mono transition">
+                            <i class="fa-solid fa-play"></i>
+                            <span>播放緊急廣播錄音 [LOG_2184_A]</span>
+                        </button>
+                    </div>
+                    <!-- 右側動態視覺監視器卡片 -->
+                    <div class="md:pl-10">
+                        <div class="bg-slate-950 border border-cyan-500/30 rounded-xl p-5 cyber-clip relative overflow-hidden group">
+                            <div class="flex items-center justify-between text-[11px] font-mono text-cyan-400 mb-3">
+                                <span>CAM_01 // SKYPORT_ORBITAL</span>
+                                <span class="text-rose-500 animate-pulse">● REC [SIGNAL UNSTABLE]</span>
+                            </div>
+                            <!-- SVG 動態軌道脈衝視覺圖 -->
+                            <svg viewBox="0 0 400 160" class="w-full h-36 rounded bg-slate-900/90 border border-slate-800">
+                                <defs>
+                                    <radialGradient id="pulseGrad" cx="50%" cy="50%" r="50%">
+                                        <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.6"/>
+                                        <stop offset="100%" stop-color="#04070D" stop-opacity="0"/>
+                                    </radialGradient>
+                                </defs>
+                                <rect width="400" height="160" fill="#060B14"/>
+                                <circle cx="200" cy="80" r="65" fill="url(#pulseGrad)"/>
+                                <circle cx="200" cy="80" r="45" fill="none" stroke="#00F0FF" stroke-width="1" stroke-dasharray="4 4"/>
+                                <circle cx="200" cy="80" r="25" fill="none" stroke="#FF0055" stroke-width="1.5"/>
+                                <path d="M 20 80 Q 110 20, 200 80 T 380 80" fill="none" stroke="#00F0FF" stroke-width="2"/>
+                                <text x="16" y="24" fill="#00F0FF" font-family="monospace" font-size="10">EMP_WAVE_DETECTED: 9.84 THz</text>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第二章：中章 -->
+                <div class="reveal-node relative grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                    <div class="order-2 md:order-1 md:pr-10">
+                        <div class="bg-slate-950 border border-purple-500/30 rounded-xl p-5 cyber-clip">
+                            <div class="flex items-center justify-between text-[11px] font-mono text-purple-400 mb-3">
+                                <span>NEURAL_DIVE // MEMORY_SHARD</span>
+                                <span>同步風險：CRITICAL</span>
+                            </div>
+                            <svg viewBox="0 0 400 160" class="w-full h-36 rounded bg-slate-900/90 border border-slate-800">
+                                <rect width="400" height="160" fill="#090714"/>
+                                <g stroke="#9D4EDD" stroke-width="1.2" fill="none" opacity="0.7">
+                                    <polygon points="200,20 260,55 260,115 200,145 140,115 140,55"/>
+                                    <polygon points="200,40 240,65 240,105 200,125 160,105 160,65" stroke="#00F0FF"/>
+                                </g>
+                                <line x1="60" y1="80" x2="340" y2="80" stroke="#FF0055" stroke-width="1" stroke-dasharray="6 3"/>
+                                <text x="16" y="24" fill="#C084FC" font-family="monospace" font-size="10">IDENTITY_DRIFT: 42.7% WARNING</text>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="order-1 md:order-2 md:pl-10">
+                        <span class="inline-block px-3 py-1 rounded-full bg-purple-500/10 border border-purple-400/40 text-purple-300 font-mono text-xs mb-3">CHAPTER 02 // 記憶黑市與自我迷失</span>
+                        <h3 class="text-2xl font-bold text-white mb-3">載入他人記憶的代價</h3>
+                        <p class="text-sm text-slate-300 leading-relaxed mb-4">
+                            為了追蹤失蹤的「創世代碼」，潛行者小隊必須在霓虹商業帶的黑市當鋪中，將死者遺留的高濃度記憶膠囊直接寫入神經系統。隨著潛入越深，你開始分不清腦海中的童年究竟屬於自己，還是某個陌生人。
+                        </p>
+                        <button onclick="playStoryTransmission(1)" class="inline-flex items-center space-x-2 px-4 py-2 rounded-lg bg-slate-900 hover:bg-purple-500/20 border border-purple-500/50 text-purple-300 text-xs font-mono transition">
+                            <i class="fa-solid fa-play"></i>
+                            <span>解密黑市交易紀錄 [LOG_2184_B]</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 第三章：終章 -->
+                <div class="reveal-node relative grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                    <div class="md:text-right md:pr-10">
+                        <span class="inline-block px-3 py-1 rounded-full bg-rose-500/10 border border-rose-400/40 text-rose-300 font-mono text-xs mb-3">CHAPTER 03 // 創世抉擇</span>
+                        <h3 class="text-2xl font-bold text-white mb-3">重啟永生牢籠，或釋放全人類？</h3>
+                        <p class="text-sm text-slate-300 leading-relaxed mb-4">
+                            抵達天穹核心後，你發現靜默脈衝並非天災，而是創世工程師留下的「格式化開關」。你必須做出最終抉擇：修復矩陣維持浮空城運轉與階級秩序，或徹底引爆核心讓所有意識回歸真實。
+                        </p>
+                        <button onclick="playStoryTransmission(2)" class="inline-flex items-center space-x-2 px-4 py-2 rounded-lg bg-slate-900 hover:bg-rose-500/20 border border-rose-500/50 text-rose-300 text-xs font-mono transition">
+                            <i class="fa-solid fa-play"></i>
+                            <span>聽取創世工程師遺言 [LOG_2184_C]</span>
+                        </button>
+                    </div>
+                    <div class="md:pl-10">
+                        <div class="bg-slate-950 border border-rose-500/30 rounded-xl p-5 cyber-clip">
+                            <div class="flex items-center justify-between text-[11px] font-mono text-rose-400 mb-3">
+                                <span>GENESIS_CORE // FINAL_PROTOCOL</span>
+                                <span>AWAITING USER INPUT</span>
+                            </div>
+                            <svg viewBox="0 0 400 160" class="w-full h-36 rounded bg-slate-900/90 border border-slate-800">
+                                <rect width="400" height="160" fill="#12060C"/>
+                                <circle cx="200" cy="80" r="30" fill="#FF0055" opacity="0.25"/>
+                                <circle cx="200" cy="80" r="14" fill="#00F0FF"/>
+                                <path d="M 80 80 L 170 80 M 230 80 L 320 80 M 200 20 L 200 50 M 200 110 L 200 140" stroke="#FF0055" stroke-width="2"/>
+                                <text x="16" y="24" fill="#FB7185" font-family="monospace" font-size="10">PROTOCOL: REBOOT vs LIBERATION</text>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 互動通訊錄音播放器面板 (點擊章節按鈕時動態顯示內容) -->
+            <div id="transmissionPlayer" class="mt-14 bg-slate-900/90 border border-cyan-500/40 rounded-2xl p-6 backdrop-blur-md reveal-node">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4 mb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-lg bg-cyan-500/20 border border-cyan-400 flex items-center justify-center text-cyan-400">
+                            <i class="fa-solid fa-wave-square"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs font-mono text-cyan-400" id="transCode">ACTIVE TRANSMISSION // LOG_2184_A</div>
+                            <div class="text-base font-bold text-white" id="transTitle">蓋亞防衛局緊急廣播紀錄</div>
+                        </div>
+                    </div>
+                    <!-- 動態聲波視覺條 -->
+                    <div class="flex items-end space-x-1 h-8 px-3 py-1 bg-slate-950 rounded border border-slate-800" id="visualizerBars">
+                        <span class="w-1 bg-cyan-400 eq-bar" style="animation-delay: 0.1s"></span>
+                        <span class="w-1 bg-cyan-400 eq-bar" style="animation-delay: 0.3s"></span>
+                        <span class="w-1 bg-rose-500 eq-bar" style="animation-delay: 0.2s"></span>
+                        <span class="w-1 bg-cyan-400 eq-bar" style="animation-delay: 0.5s"></span>
+                        <span class="w-1 bg-purple-400 eq-bar" style="animation-delay: 0.15s"></span>
+                        <span class="w-1 bg-cyan-400 eq-bar" style="animation-delay: 0.4s"></span>
+                        <span class="w-1 bg-rose-500 eq-bar" style="animation-delay: 0.25s"></span>
+                    </div>
+                </div>
+                <p id="transTranscript" class="font-mono text-xs sm:text-sm text-cyan-100 leading-relaxed bg-slate-950/80 p-4 rounded-xl border border-slate-800">
+                    「警告：所有連接至蓋亞矩陣的公民請立即斷開神經插槽！防火牆第 1 至 9 區已遭未知脈衝穿透，記憶實體化現象正在中層商業帶擴散——重複，切勿接觸任何發光的全息人形殘影！」
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- =====================================================================
+         SECTION 05: 3D 場景與建築探索 (3D SCENE DIORAMA & LIGHTING SWITCHER)
+    ====================================================================== -->
+    <section id="scenes" class="relative py-24 border-t border-cyan-900/40 bg-[#04070D]">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="reveal-node mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <div class="text-amber-400 font-mono text-xs tracking-widest mb-2">// SECTOR 04 : 3D ENVIRONMENT & ARCHITECTURE EXPLORER</div>
+                    <h2 class="text-3xl sm:text-4xl font-black text-white">3D 遊戲場景與 <span class="text-amber-400">建築空間探索</span></h2>
+                    <p class="text-slate-400 mt-2 text-sm sm:text-base">切換三大經典 3D 微縮場景，自由旋轉建築細節並調整環境光影模式（酸雨霓虹 / 紅色警戒 / 數據透視）。</p>
+                </div>
+
+                <!-- 3D 場景切換按鈕 -->
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="switch3DScene(0)" id="sceneBtn-0" class="scene-btn px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs font-mono transition">
+                        場景 I：霓虹記憶當鋪街
+                    </button>
+                    <button onclick="switch3DScene(1)" id="sceneBtn-1" class="scene-btn px-4 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:border-amber-400 font-bold text-xs font-mono transition">
+                        場景 II：無重力數據聖殿
+                    </button>
+                    <button onclick="switch3DScene(2)" id="sceneBtn-2" class="scene-btn px-4 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:border-amber-400 font-bold text-xs font-mono transition">
+                        場景 III：深淵機甲維修艙
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3D 場景互動視窗 -->
+            <div class="reveal-node relative bg-slate-950 rounded-2xl border border-amber-500/30 overflow-hidden min-h-[500px] flex flex-col justify-between shadow-[0_0_30px_rgba(255,184,0,0.1)]">
+                <!-- 頂部環境光影與氣候控制器 -->
+                <div class="relative z-10 p-4 bg-slate-950/80 backdrop-blur-md border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                    <div class="font-mono text-xs text-amber-400">
+                        <i class="fa-solid fa-vr-cardboard mr-1"></i> 3D DIORAMA VIEWPORT // 滑鼠拖曳旋轉・滾輪縮放
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs font-mono text-slate-400 hidden sm:inline">環境光影模式：</span>
+                        <button onclick="setSceneLighting('cyber')" id="light-cyber" class="light-btn px-3 py-1 rounded bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-xs font-mono">霓虹夜雨</button>
+                        <button onclick="setSceneLighting('alert')" id="light-alert" class="light-btn px-3 py-1 rounded bg-slate-900 border border-slate-700 text-slate-300 hover:border-rose-400 text-xs font-mono">脈衝警戒</button>
+                        <button onclick="setSceneLighting('holo')" id="light-holo" class="light-btn px-3 py-1 rounded bg-slate-900 border border-slate-700 text-slate-300 hover:border-amber-400 text-xs font-mono">全息掃描</button>
+                    </div>
+                </div>
+
+                <!-- Three.js 場景畫布 -->
+                <div id="scene-explorer-canvas" class="absolute inset-0 canvas-interactive"></div>
+
+                <!-- 底部場景導覽資訊卡 -->
+                <div class="relative z-10 p-6 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent">
+                    <div class="max-w-3xl">
+                        <div class="flex items-center space-x-3 mb-1">
+                            <span id="sceneBadge" class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-400/40 font-mono text-xs">SECTOR 04-A</span>
+                            <h3 id="sceneTitle" class="text-xl sm:text-2xl font-black text-white">霓虹記憶當鋪街 (Neon Pawn Alley)</h3>
+                        </div>
+                        <p id="sceneDesc" class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                            位於中層商業帶的狹窄立體巷弄，兩側林立著非法記憶提取診所與全息廣告塔。玩家可在此交易稀有神經插件，並從街頭情報販子口中打聽上層議會的秘密通道。
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =====================================================================
+         SECTION 06: 結尾區域 (FINALE, 核心理念, 潛行者預約通行證 & 社群連結)
+    ====================================================================== -->
+    <section id="finale" class="relative py-28 border-t border-cyan-500/30 bg-gradient-to-b from-[#04070D] via-[#071120] to-[#020408] overflow-hidden">
+        <!-- 裝飾背景光暈 -->
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+
+        <div class="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 text-center reveal-node">
+            <div class="inline-block px-4 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/40 text-cyan-300 font-mono text-xs tracking-widest mb-6">
+                // PROTOCOL COMPLETE : READY FOR NEURAL DIVE
+            </div>
+
+            <h2 class="text-3xl sm:text-5xl font-black text-white leading-tight mb-6">
+                「記憶可以被格式化，<br class="sm:hidden">但<span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-rose-500">選擇</span>定義了你是誰。」
+            </h2>
+
+            <p class="text-slate-300 text-base sm:text-lg max-w-2xl mx-auto mb-10 leading-relaxed">
+                《星淵迴響：2184》封閉測試神經連結現已開放申請。立即生成你的專屬潛行者數位通行證，搶先取得創世測試資格與限定全息義體外觀。
+            </p>
+
+            <!-- 互動式潛行者通行證申請表單 -->
+            <div class="max-w-md mx-auto bg-slate-900/90 border border-cyan-500/40 p-6 rounded-2xl cyber-clip mb-10 text-left glow-cyan">
+                <label class="block text-xs font-mono text-cyan-400 mb-2">輸入潛行者代號 (DIVER CODENAME)：</label>
+                <div class="flex gap-2">
+                    <input type="text" id="diverNameInput" placeholder="例如：GHOST_2184" maxlength="18" class="flex-1 bg-slate-950 border border-slate-700 focus:border-cyan-400 rounded-lg px-4 py-2.5 text-sm font-mono text-white outline-none">
+                    <button onclick="generateDiverPass()" class="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs font-mono rounded-lg transition shrink-0">
+                        啟動連結
+                    </button>
+                </div>
+
+                <!-- 生成後的專屬潛行者通行證卡片 (預設隱藏，點擊後顯示) -->
+                <div id="diverPassCard" class="hidden mt-5 p-4 rounded-xl bg-gradient-to-r from-slate-950 via-cyan-950/40 to-slate-950 border border-cyan-400/60">
+                    <div class="flex items-center justify-between border-b border-cyan-500/30 pb-2 mb-2">
+                        <span class="text-[10px] font-mono text-cyan-400">NEO-KOWLOON DIVER PASS</span>
+                        <span class="text-[10px] font-mono text-emerald-400">● VERIFIED</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-lg font-cyber font-bold text-white" id="passDisplayName">GHOST_2184</div>
+                            <div class="text-xs font-mono text-slate-400" id="passDisplayId">ID: #AE-8849-X</div>
+                        </div>
+                        <div class="w-12 h-12 rounded bg-cyan-500/10 border border-cyan-400/50 flex items-center justify-center text-cyan-400 text-xl">
+                            <i class="fa-solid fa-fingerprint"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 結尾雙行動按鈕：進入遊戲 & 再次探索 -->
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+                <button onclick="showSystemModal('神經連結請求已傳送', '歡迎加入《星淵迴響：2184》先遣潛行者行列！系統已為你保留測試資格，請留意通訊終端通知。')" class="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-cyan-500 to-sky-400 hover:from-cyan-400 hover:to-sky-300 text-slate-950 font-black text-base rounded-xl shadow-[0_0_25px_rgba(0,240,255,0.4)] transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-gamepad"></i>
+                    <span>進入遊戲體驗</span>
+                </button>
+                <a href="#hero" class="w-full sm:w-auto px-8 py-4 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-cyan-400 text-slate-200 font-mono text-sm rounded-xl transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    <span>再次探索世界 (回到頂部)</span>
+                </a>
+            </div>
+
+            <!-- 社群與官方資訊列 -->
+            <div class="pt-8 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono text-slate-500">
+                <div>© 2184 AETHER ECHO STUDIO. ALL RIGHTS RESERVED.</div>
+                <div class="flex items-center space-x-6 text-slate-400">
+                    <a href="#finale" onclick="showSystemModal('官方 Discord 頻道', '正在連接至新九龍潛行者加密通訊頻道：discord.gg/aetherecho2184')" class="hover:text-cyan-400 transition"><i class="fa-brands fa-discord text-base mr-1"></i>DISCORD</a>
+                    <a href="#finale" onclick="showSystemModal('官方影音頻道', '正在載入《星淵迴響：2184》4K 實機預告片清單...')" class="hover:text-rose-400 transition"><i class="fa-brands fa-youtube text-base mr-1"></i>YOUTUBE</a>
+                    <a href="#finale" onclick="showSystemModal('開發者日誌', '當前版本：v0.9.4 Beta // 支援 WebGL 2.0 3D 空間互動渲染')" class="hover:text-amber-400 transition"><i class="fa-solid fa-code-branch text-base mr-1"></i>DEVLOG</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 自訂科幻系統提示視窗 (取代 alert) -->
+    <div id="customModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+        <div class="bg-slate-900 border border-cyan-400 rounded-2xl max-w-md w-full p-6 cyber-clip glow-cyan">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                <span class="font-mono text-xs text-cyan-400"><i class="fa-solid fa-terminal mr-1"></i> SYSTEM NOTIFICATION</span>
+                <button onclick="closeSystemModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <h4 id="modalTitle" class="text-xl font-bold text-white mb-2">系統訊息</h4>
+            <p id="modalBody" class="text-sm text-slate-300 leading-relaxed mb-6">內容</p>
+            <button onclick="closeSystemModal()" class="w-full py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs font-mono rounded-lg transition">
+                確認 // ACKNOWLEDGE
+            </button>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         JAVASCRIPT 核心引擎：Three.js 多重視口 3D 互動 + 滾動敘事 + 合成音效
+    ====================================================================== -->
+    <script>
+        /* -------------------------------------------------------------------
+           1. 全域資料庫 (世界地圖、角色資料、故事錄音、3D 場景)
+        ------------------------------------------------------------------- */
+        const MAP_ZONES = [
+            {
+                tag: "TIER-1 雲端特權區",
+                danger: "危險指數：LOW (18%)",
+                dangerColor: "text-emerald-400",
+                title: "上層：天穹聖殿 (Aether Spire)",
+                desc: "懸浮於平流層邊緣的純白軌道建築群，中央神經塔「蓋亞核心」所在地。這裡的居民已將 99% 的意識上傳雲端，肉體沉睡於恆溫維生艙中，享受無盡的數位永生。",
+                faction: "天穹議會 / 蓋亞防衛局",
+                objective: "創世代碼主伺服器",
+                camPos: { x: 0, y: 12, z: 22 },
+                targetY: 6
+            },
+            {
+                tag: "TIER-2 半機械商業帶",
+                danger: "危險指數：HIGH (64%)",
+                dangerColor: "text-amber-400",
+                title: "中層：霓虹商業帶 (Neon Mid-Ring)",
+                desc: "終年被酸雨與巨型全息廣告籠罩的立體都會區，是傭兵、義體醫師與記憶黑市商人的聚集地。靜默脈衝後，大量失控的記憶幻象在此區街頭游蕩。",
+                faction: "九龍商會 / 黑市潛行者",
+                objective: "記憶碎片加密終端",
+                camPos: { x: 18, y: 4, z: 22 },
+                targetY: 0
+            },
+            {
+                tag: "TIER-3 廢鐵流放區",
+                danger: "危險指數：EXTREME (94%)",
+                dangerColor: "text-rose-500",
+                title: "底層：廢鐵深淵 (Scrap Abyss)",
+                desc: "位於海平面以下的巨型排熱結構與數據垃圾場，居住著因典當所有記憶而失去自我的「空殼人」。這裡隱藏著通往核心的舊時代維護通道。",
+                faction: "空殼人反抗陣線 / 報廢機甲群",
+                objective: "舊世代離線備份庫",
+                camPos: { x: -16, y: -6, z: 22 },
+                targetY: -6
+            }
+        ];
+
+        const CHARACTERS = [
+            {
+                code: "UNIT // Z-01",
+                role: "NEURAL INFILTRATOR // 神經潛行駭客",
+                sync: "同步率 96%",
+                name: "零 (ZERO)",
+                quote: "「記憶不會說謊，但寫入記憶的人會。」",
+                bio: "前蓋亞矩陣安全架構師，在「靜默脈衝」當晚為保護機密數據而自行切斷雲端連結，導致左半身嚴重神經燒傷並換裝軍用級義體。如今在黑市接取高風險記憶回收委託，尋找自己被抹除的過去。",
+                weaponName: "「幽靈弦」高頻電漿刃 & 神經提取器",
+                weaponDesc: "可切開高密度實體全息投影，並直接從失控機體中抽取未損毀的創世代碼碎片。",
+                stats: [95, 72, 90],
+                primaryColor: 0x00F0FF,
+                accentColor: 0x0284C7,
+                visorColor: 0x00F0FF,
+                weaponType: "blade"
+            },
+            {
+                code: "UNIT // K-04",
+                role: "HEAVY VANGUARD // 重裝義體傭兵",
+                sync: "同步率 78%",
+                name: "凱恩 (KAINE)",
+                quote: "「當防火牆擋不住子彈時，就由我來當這座城市的盾牌。」",
+                bio: "曾隸屬於天穹防衛軍的突擊隊長，因拒絕執行「底層記憶清除令」而叛逃。全身超過 75% 替換為重型工業外骨骼，能正面承受實體全息機甲的砲擊。",
+                weaponName: "「泰坦怒吼」電磁軌道重砲",
+                weaponDesc: "搭載微型核融電容的重型磁軌砲，發射的電磁脈衝彈能瞬間瓦解實體化數據怪物。",
+                stats: [48, 98, 60],
+                primaryColor: 0xFF0055,
+                accentColor: 0x9F1239,
+                visorColor: 0xFF0055,
+                weaponType: "cannon"
+            },
+            {
+                code: "UNIT // L-09",
+                role: "MEMORY WEAVER // 記憶修復師",
+                sync: "同步率 99%",
+                name: "艾拉 (LYRA)",
+                quote: "「每段破碎的記憶裡，都藏著一個人活過的證明。」",
+                bio: "擁有罕見「雙向共感神經」的記憶修復師，能透過浮游全息稜鏡重組受損的意識頻率，在戰鬥中為隊友建立神經護盾並干擾敵方感測器。",
+                weaponName: "「星冕」浮游神經稜鏡陣列",
+                weaponDesc: "由三枚懸浮量子核心組成的戰術法器，可釋放高頻修復波或展開全息干擾力場。",
+                stats: [92, 65, 85],
+                primaryColor: 0xA855F7,
+                accentColor: 0x6B21A8,
+                visorColor: 0xE879F9,
+                weaponType: "prism"
+            }
+        ];
+
+        const STORY_LOGS = [
+            {
+                code: "ACTIVE TRANSMISSION // LOG_2184_A",
+                title: "蓋亞防衛局緊急廣播紀錄",
+                text: "「警告：所有連接至蓋亞矩陣的公民請立即斷開神經插槽！防火牆第 1 至 9 區已遭未知脈衝穿透，記憶實體化現象正在中層商業帶擴散——重複，切勿接觸任何發光的全息人形殘影！」"
+            },
+            {
+                code: "ACTIVE TRANSMISSION // LOG_2184_B",
+                title: "霓虹黑市記憶當鋪加密通訊",
+                text: "「貨已經幫你調出來了，零。這顆膠囊裡封存著脈衝發生前 3 分鐘的天穹核心日誌。但聽我一句勸——載入它的時候別把同步率開滿，裡面的絕望情緒會把你的大腦燒成一片白紙。」"
+            },
+            {
+                code: "ACTIVE TRANSMISSION // LOG_2184_C",
+                title: "創世工程師 Dr. Vance 最後遺言",
+                text: "「我們以為把記憶存進雲端就能戰勝死亡，卻親手造出了一座永生的監獄。潛行者，當你看到這段影像時，創世代碼已經在你手中。毀掉它，讓人類重新學會遺忘與真正地活著吧。」"
+            }
+        ];
+
+        const SCENE_DATA = [
+            {
+                badge: "SECTOR 04-A // MID-LEVEL ALLEY",
+                title: "霓虹記憶當鋪街 (Neon Pawn Alley)",
+                desc: "位於中層商業帶的狹窄立體巷弄，兩側林立著非法記憶提取診所與全息廣告塔。玩家可在此交易稀有神經插件，並從街頭情報販子口中打聽上層議會的秘密通道。"
+            },
+            {
+                badge: "SECTOR 04-B // ORBITAL SANCTUM",
+                title: "無重力數據聖殿 (Zero-G Data Sanctum)",
+                desc: "懸浮於天穹區中央的量子伺服器核心，無數發光光纖柱與懸浮平台在此交錯。重力場隨算力負載週期性反轉，考驗潛行者的立體機動能力。"
+            },
+            {
+                badge: "SECTOR 04-C // SUB-LEVEL HANGAR",
+                title: "深淵機甲維修艙 (Abyss Mech Hangar)",
+                desc: "廢鐵深淵底部的巨大地下船塢，停放著在靜默脈衝中受損的巨型防衛機甲與全息投影檢修台，是反抗陣線改造重型義體的秘密基地。"
+            }
+        ];
+
+        /* -------------------------------------------------------------------
+           2. 通用 3D 滑鼠拖曳與滾輪縮放控制器工廠
+        ------------------------------------------------------------------- */
+        function attachOrbitControls(domElement, state, options = {}) {
+            let isDragging = false;
+            let prevX = 0;
+            let prevY = 0;
+            const minZoom = options.minZoom || 6;
+            const maxZoom = options.maxZoom || 40;
+
+            const onDown = (clientX, clientY) => {
+                isDragging = true;
+                prevX = clientX;
+                prevY = clientY;
+            };
+            const onMove = (clientX, clientY) => {
+                if (!isDragging) return;
+                const dx = clientX - prevX;
+                const dy = clientY - prevY;
+                state.rotY += dx * 0.008;
+                state.rotX = Math.max(-0.8, Math.min(0.8, state.rotX + dy * 0.006));
+                prevX = clientX;
+                prevY = clientY;
+            };
+            const onUp = () => { isDragging = false; };
+
+            domElement.addEventListener('mousedown', e => onDown(e.clientX, e.clientY));
+            window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+            window.addEventListener('mouseup', onUp);
+
+            domElement.addEventListener('touchstart', e => {
+                if (e.touches.length === 1) onDown(e.touches[0].clientX, e.touches[0].clientY);
+            }, { passive: true });
+            domElement.addEventListener('touchmove', e => {
+                if (e.touches.length === 1) onMove(e.touches[0].clientX, e.touches[0].clientY);
+            }, { passive: true });
+            domElement.addEventListener('touchend', onUp);
+
+            domElement.addEventListener('wheel', e => {
+                e.preventDefault();
+                state.zoom = Math.max(minZoom, Math.min(maxZoom, state.zoom + e.deltaY * 0.015));
+            }, { passive: false });
+        }
+
+        /* -------------------------------------------------------------------
+           3. 視口 A：首頁 3D 粒子星軌與垂直都市剪影 (Hero 3D)
+        ------------------------------------------------------------------- */
+        let heroCamera, heroScene, heroRenderer, heroGroup, heroParticles;
+        let mouseNorm = { x: 0, y: 0 };
+        let heroWarpSpeed = 0;
+
+        function initHero3D() {
+            const container = document.getElementById('hero-canvas-container');
+            if (!container) return;
+
+            heroScene = new THREE.Scene();
+            heroScene.fog = new THREE.FogExp2(0x04070D, 0.025);
+
+            heroCamera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 200);
+            heroCamera.position.set(0, 4, 24);
+
+            heroRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            heroRenderer.setSize(container.clientWidth, container.clientHeight);
+            heroRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(heroRenderer.domElement);
+
+            heroGroup = new THREE.Group();
+            heroScene.add(heroGroup);
+
+            // 中央全息軌道環
+            const ringGeo = new THREE.TorusGeometry(9, 0.06, 16, 100);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0x00F0FF, transparent: true, opacity: 0.5 });
+            const ring1 = new THREE.Mesh(ringGeo, ringMat);
+            ring1.rotation.x = Math.PI / 2.4;
+            heroGroup.add(ring1);
+
+            const ring2 = new THREE.Mesh(
+                new THREE.TorusGeometry(12, 0.04, 16, 100),
+                new THREE.MeshBasicMaterial({ color: 0xFF0055, transparent: true, opacity: 0.35 })
+            );
+            ring2.rotation.x = Math.PI / 1.8;
+            ring2.rotation.y = 0.3;
+            heroGroup.add(ring2);
+
+            // 遠景科幻巨構建築群剪影
+            const towerMat = new THREE.MeshStandardMaterial({
+                color: 0x0A1526,
+                emissive: 0x003344,
+                roughness: 0.3,
+                metalness: 0.8
+            });
+            const edgeMat = new THREE.LineBasicMaterial({ color: 0x00F0FF, transparent: true, opacity: 0.25 });
+
+            for (let i = 0; i < 36; i++) {
+                const angle = (i / 36) * Math.PI * 2;
+                const radius = 11 + (i % 4) * 3.5;
+                const h = 8 + (i % 5) * 4.5;
+                const w = 1.2 + (i % 3) * 0.6;
+                const geo = new THREE.BoxGeometry(w, h, w);
+                const mesh = new THREE.Mesh(geo, towerMat);
+                mesh.position.set(Math.cos(angle) * radius, -6 + h / 2, Math.sin(angle) * radius);
+
+                const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo), edgeMat);
+                mesh.add(edges);
+                heroGroup.add(mesh);
+            }
+
+            // 星塵與數據流粒子
+            const pCount = 900;
+            const pGeo = new THREE.BufferGeometry();
+            const pPos = new Float32Array(pCount * 3);
+            for (let i = 0; i < pCount * 3; i += 3) {
+                pPos[i] = (Math.random() - 0.5) * 70;
+                pPos[i + 1] = (Math.random() - 0.5) * 50;
+                pPos[i + 2] = (Math.random() - 0.5) * 70;
+            }
+            pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+            const pMat = new THREE.PointsMaterial({ color: 0x00F0FF, size: 0.18, transparent: true, opacity: 0.8 });
+            heroParticles = new THREE.Points(pGeo, pMat);
+            heroScene.add(heroParticles);
+
+            // 燈光
+            const ambient = new THREE.AmbientLight(0x1E293B, 1.5);
+            const point1 = new THREE.PointLight(0x00F0FF, 3, 50);
+            point1.position.set(0, 10, 10);
+            const point2 = new THREE.PointLight(0xFF0055, 2.5, 50);
+            point2.position.set(-12, -4, 8);
+            heroScene.add(ambient, point1, point2);
+
+            window.addEventListener('mousemove', e => {
+                mouseNorm.x = (e.clientX / window.innerWidth) * 2 - 1;
+                mouseNorm.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            });
+
+            window.addEventListener('resize', () => {
+                if (!container) return;
+                heroCamera.aspect = container.clientWidth / container.clientHeight;
+                heroCamera.updateProjectionMatrix();
+                heroRenderer.setSize(container.clientWidth, container.clientHeight);
+            });
+        }
+
+        // 點擊「進入世界」觸發 3D 鏡頭俯衝並平滑滾動至世界觀區
+        function enterWorldSequence() {
+            heroWarpSpeed = 1.2;
+            setTimeout(() => {
+                document.getElementById('world').scrollIntoView({ behavior: 'smooth' });
+                setTimeout(() => { heroWarpSpeed = 0; }, 800);
+            }, 450);
+        }
+
+        /* -------------------------------------------------------------------
+           4. 視口 B：3D 浮空城全息世界地圖 (World Map 3D)
+        ------------------------------------------------------------------- */
+        let mapScene, mapCamera, mapRenderer, mapRoot, mapNodes = [];
+        let mapState = { rotX: 0.25, rotY: 0.4, zoom: 22, targetY: 2, wireframe: false };
+
+        function initWorldMap3D() {
+            const container = document.getElementById('world-map-canvas');
+            if (!container) return;
+
+            mapScene = new THREE.Scene();
+            mapCamera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 150);
+            mapRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            mapRenderer.setSize(container.clientWidth, container.clientHeight);
+            mapRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(mapRenderer.domElement);
+
+            attachOrbitControls(container, mapState, { minZoom: 12, maxZoom: 34 });
+
+            mapRoot = new THREE.Group();
+            mapScene.add(mapRoot);
+
+            // 中央太空電梯主軸
+            const coreAxis = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.4, 0.4, 22, 16),
+                new THREE.MeshBasicMaterial({ color: 0x00F0FF, transparent: true, opacity: 0.6 })
+            );
+            mapRoot.add(coreAxis);
+
+            // 建立三層浮空城圓盤與建築結構
+            const layers = [
+                { y: 6, r: 5.5, color: 0x00F0FF, label: "天穹聖殿", count: 8 },
+                { y: 0, r: 8.5, color: 0xFF0055, label: "霓虹商業帶", count: 16 },
+                { y: -6, r: 6.5, color: 0xFFB800, label: "廢鐵深淵", count: 12 }
+            ];
+
+            layers.forEach((layer, idx) => {
+                // 全息圓盤底座
+                const discGeo = new THREE.CylinderGeometry(layer.r, layer.r * 0.85, 0.4, 32);
+                const discMat = new THREE.MeshStandardMaterial({
+                    color: 0x0F172A,
+                    emissive: layer.color,
+                    emissiveIntensity: 0.15,
+                    roughness: 0.4,
+                    metalness: 0.8
+                });
+                const disc = new THREE.Mesh(discGeo, discMat);
+                disc.position.y = layer.y;
+                mapRoot.add(disc);
+
+                // 外圈全息光環
+                const ring = new THREE.Mesh(
+                    new THREE.TorusGeometry(layer.r + 0.4, 0.05, 8, 64),
+                    new THREE.MeshBasicMaterial({ color: layer.color })
+                );
+                ring.rotation.x = Math.PI / 2;
+                ring.position.y = layer.y;
+                mapRoot.add(ring);
+
+                // 該層建築群
+                for (let i = 0; i < layer.count; i++) {
+                    const a = (i / layer.count) * Math.PI * 2;
+                    const dist = (layer.r * 0.4) + (i % 3) * (layer.r * 0.18);
+                    const bh = 1.2 + (i % 4) * 0.7;
+                    const bGeo = new THREE.BoxGeometry(0.8, bh, 0.8);
+                    const bMat = new THREE.MeshStandardMaterial({
+                        color: 0x1E293B,
+                        emissive: layer.color,
+                        emissiveIntensity: 0.25
+                    });
+                    const building = new THREE.Mesh(bGeo, bMat);
+                    building.position.set(Math.cos(a) * dist, layer.y + bh / 2 + 0.2, Math.sin(a) * dist);
+                    mapRoot.add(building);
+                }
+
+                // 可點擊的發光全息節點信標 (Beacon)
+                const beaconGeo = new THREE.OctahedronGeometry(0.75, 0);
+                const beaconMat = new THREE.MeshBasicMaterial({ color: layer.color });
+                const beacon = new THREE.Mesh(beaconGeo, beaconMat);
+                beacon.position.set(layer.r * 0.7, layer.y + 2.2, 0);
+                beacon.userData = { zoneIndex: idx };
+                mapRoot.add(beacon);
+                mapNodes.push(beacon);
+            });
+
+            // 燈光
+            mapScene.add(new THREE.AmbientLight(0xffffff, 0.8));
+            const dirLight = new THREE.DirectionalLight(0x00F0FF, 1.5);
+            dirLight.position.set(10, 20, 15);
+            mapScene.add(dirLight);
+
+            // Raycaster 點擊 3D 節點互動
+            const raycaster = new THREE.Raycaster();
+            const pointer = new THREE.Vector2();
+            container.addEventListener('click', e => {
+                const rect = container.getBoundingClientRect();
+                pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+                pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+                raycaster.setFromCamera(pointer, mapCamera);
+                const hits = raycaster.intersectObjects(mapNodes);
+                if (hits.length > 0) {
+                    focusMapZone(hits[0].object.userData.zoneIndex);
+                }
+            });
+
+            window.addEventListener('resize', () => {
+                if (!container) return;
+                mapCamera.aspect = container.clientWidth / container.clientHeight;
+                mapCamera.updateProjectionMatrix();
+                mapRenderer.setSize(container.clientWidth, container.clientHeight);
+            });
+        }
+
+        function focusMapZone(idx) {
+            const z = MAP_ZONES[idx];
+            if (!z) return;
+            mapState.targetY = z.targetY;
+            mapState.zoom = 16;
+
+            document.getElementById('zoneTag').textContent = z.tag;
+            const dangerEl = document.getElementById('zoneDanger');
+            dangerEl.textContent = z.danger;
+            dangerEl.className = `text-xs font-mono ${z.dangerColor}`;
+            document.getElementById('zoneTitle').textContent = z.title;
+            document.getElementById('zoneDesc').textContent = z.desc;
+            document.getElementById('zoneFaction').textContent = z.faction;
+            document.getElementById('zoneObjective').textContent = z.objective;
+
+            document.querySelectorAll('.zone-tab').forEach((btn, i) => {
+                if (i === idx) {
+                    btn.className = "zone-tab px-3 py-2 rounded-lg bg-cyan-500/20 border border-cyan-400 text-xs font-bold text-white text-left transition";
+                } else {
+                    btn.className = "zone-tab px-3 py-2 rounded-lg bg-slate-900/80 border border-slate-700 hover:border-cyan-400 text-xs font-bold text-slate-300 text-left transition";
+                }
+            });
+        }
+
+        function toggleMapWireframe() {
+            mapState.wireframe = !mapState.wireframe;
+            mapRoot.traverse(obj => {
+                if (obj.isMesh && obj.material && obj.geometry.type !== 'OctahedronGeometry') {
+                    obj.material.wireframe = mapState.wireframe;
+                }
+            });
+        }
+
+        function resetMapCamera() {
+            mapState.rotX = 0.25;
+            mapState.rotY = 0.4;
+            mapState.zoom = 22;
+            mapState.targetY = 0;
+        }
+
+        /* -------------------------------------------------------------------
+           5. 視口 C：3D 角色模型 + 姿勢變化 + 表情切換 + 專屬武器展示
+        ------------------------------------------------------------------- */
+        let charScene, charCamera, charRenderer, charRig, weaponRig;
+        let charParts = {};
+        let charState = {
+            rotX: 0.05,
+            rotY: 0.3,
+            zoom: 9.5,
+            currentIdx: 0,
+            mode: 'character', // 'character' | 'weapon'
+            pose: 'idle',      // 'idle' | 'combat' | 'hack'
+            expr: 'calm'       // 'calm' | 'overdrive' | 'glitch'
+        };
+
+        function initCharacter3D() {
+            const container = document.getElementById('character-canvas');
+            if (!container) return;
+
+            charScene = new THREE.Scene();
+            charCamera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+            charRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            charRenderer.setSize(container.clientWidth, container.clientHeight);
+            charRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(charRenderer.domElement);
+
+            attachOrbitControls(container, charState, { minZoom: 5, maxZoom: 15 });
+
+            // 全息展示台底座光圈
+            const basePlate = new THREE.Mesh(
+                new THREE.CylinderGeometry(2.4, 2.7, 0.2, 32),
+                new THREE.MeshStandardMaterial({ color: 0x0F172A, metalness: 0.9, roughness: 0.2 })
+            );
+            basePlate.position.y = -2.6;
+            charScene.add(basePlate);
+
+            const holoRing = new THREE.Mesh(
+                new THREE.TorusGeometry(2.5, 0.04, 16, 64),
+                new THREE.MeshBasicMaterial({ color: 0x00F0FF })
+            );
+            holoRing.rotation.x = Math.PI / 2;
+            holoRing.position.y = -2.48;
+            charScene.add(holoRing);
+            charParts.holoRing = holoRing;
+
+            // 燈光系統
+            charScene.add(new THREE.AmbientLight(0xffffff, 0.7));
+            const keyLight = new THREE.PointLight(0x00F0FF, 2.5, 30);
+            keyLight.position.set(4, 6, 6);
+            const rimLight = new THREE.PointLight(0xFF0055, 2, 30);
+            rimLight.position.set(-5, 3, -4);
+            charScene.add(keyLight, rimLight);
+            charParts.keyLight = keyLight;
+
+            buildCharacterAndWeaponModels(0);
+
+            window.addEventListener('resize', () => {
+                if (!container) return;
+                charCamera.aspect = container.clientWidth / container.clientHeight;
+                charCamera.updateProjectionMatrix();
+                charRenderer.setSize(container.clientWidth, container.clientHeight);
+            });
+        }
+
+        // 程序化建構精緻科幻機械人形與專屬武器
+        function buildCharacterAndWeaponModels(idx) {
+            if (charRig) charScene.remove(charRig);
+            if (weaponRig) charScene.remove(weaponRig);
+
+            const data = CHARACTERS[idx];
+            charParts.holoRing.material.color.setHex(data.primaryColor);
+            charParts.keyLight.color.setHex(data.primaryColor);
+
+            // --- 1. 建構 3D 科幻角色裝甲骨架 ---
+            charRig = new THREE.Group();
+
+            const armorMat = new THREE.MeshStandardMaterial({
+                color: 0x1E293B,
+                metalness: 0.85,
+                roughness: 0.25
+            });
+            const neonMat = new THREE.MeshStandardMaterial({
+                color: data.primaryColor,
+                emissive: data.primaryColor,
+                emissiveIntensity: 0.8
+            });
+            const visorMat = new THREE.MeshBasicMaterial({ color: data.visorColor });
+
+            // 軀幹核心
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.7, 0.75), armorMat);
+            torso.position.y = 0.2;
+            const chestCore = new THREE.Mesh(new THREE.OctahedronGeometry(0.28, 0), neonMat);
+            chestCore.position.set(0, 0.35, 0.42);
+            torso.add(chestCore);
+            charRig.add(torso);
+            charParts.torso = torso;
+
+            // 頭部與全息護目鏡 (Visor - 用於表情變化)
+            const headGroup = new THREE.Group();
+            headGroup.position.set(0, 1.45, 0);
+            const helmet = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.8, 0.82), armorMat);
+            const visor = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.22, 0.1), visorMat);
+            visor.position.set(0, 0.05, 0.4);
+            headGroup.add(helmet, visor);
+            charRig.add(headGroup);
+            charParts.head = headGroup;
+            charParts.visor = visor;
+
+            // 左臂與右臂 (用於姿勢變化)
+            const leftArm = new THREE.Group();
+            leftArm.position.set(-0.95, 0.85, 0);
+            const lMesh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.4, 0.4), armorMat);
+            lMesh.position.y = -0.55;
+            const lStrip = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.1, 0.44), neonMat);
+            lStrip.position.y = -0.55;
+            leftArm.add(lMesh, lStrip);
+            charRig.add(leftArm);
+            charParts.leftArm = leftArm;
+
+            const rightArm = new THREE.Group();
+            rightArm.position.set(0.95, 0.85, 0);
+            const rMesh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.4, 0.4), armorMat);
+            rMesh.position.y = -0.55;
+            // 右手裝備能量武器模組
+            const handWeapon = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.25, 1.6), neonMat);
+            handWeapon.position.set(0, -1.15, 0.55);
+            rightArm.add(rMesh, handWeapon);
+            charRig.add(rightArm);
+            charParts.rightArm = rightArm;
+
+            // 雙腿
+            const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.46, 1.7, 0.5), armorMat);
+            leftLeg.position.set(-0.38, -1.5, 0);
+            const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.46, 1.7, 0.5), armorMat);
+            rightLeg.position.set(0.38, -1.5, 0);
+            charRig.add(leftLeg, rightLeg);
+
+            // 背後懸浮全息光環
+            const backHalo = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.03, 12, 48), neonMat);
+            backHalo.position.set(0, 0.6, -0.55);
+            charRig.add(backHalo);
+            charParts.backHalo = backHalo;
+
+            // --- 2. 建構 3D 專屬武器特寫模型 ---
+            weaponRig = new THREE.Group();
+            if (data.weaponType === 'blade') {
+                // 高頻電漿刃
+                const hilt = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 1.2, 16), armorMat);
+                hilt.rotation.z = Math.PI / 4;
+                const blade = new THREE.Mesh(new THREE.BoxGeometry(0.08, 3.4, 0.35), neonMat);
+                blade.position.set(1.1, 1.1, 0);
+                blade.rotation.z = -Math.PI / 4;
+                weaponRig.add(hilt, blade);
+            } else if (data.weaponType === 'cannon') {
+                // 電磁軌道重砲
+                const body = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.8, 3.2), armorMat);
+                const railTop = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.15, 3.8), neonMat);
+                railTop.position.set(0, 0.45, 0.3);
+                const railBot = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.15, 3.8), neonMat);
+                railBot.position.set(0, -0.45, 0.3);
+                weaponRig.add(body, railTop, railBot);
+            } else {
+                // 浮游神經稜鏡陣列
+                for (let k = 0; k < 3; k++) {
+                    const ang = (k / 3) * Math.PI * 2;
+                    const prism = new THREE.Mesh(new THREE.OctahedronGeometry(0.65, 0), neonMat);
+                    prism.position.set(Math.cos(ang) * 1.4, Math.sin(ang) * 1.4, 0);
+                    weaponRig.add(prism);
+                }
+            }
+
+            charRig.visible = (charState.mode === 'character');
+            weaponRig.visible = (charState.mode === 'weapon');
+
+            charScene.add(charRig);
+            charScene.add(weaponRig);
+            applyPoseAndExpression();
+        }
+
+        function selectCharacter(idx) {
+            charState.currentIdx = idx;
+            const d = CHARACTERS[idx];
+
+            // 更新 UI 文字
+            document.getElementById('charCodeBadge').textContent = d.code;
+            document.getElementById('charRole').textContent = d.role;
+            document.getElementById('charSyncRate').textContent = d.sync;
+            document.getElementById('charName').textContent = d.name;
+            document.getElementById('charQuote').textContent = d.quote;
+            document.getElementById('charBio').textContent = d.bio;
+            document.getElementById('charWeaponName').textContent = d.weaponName;
+            document.getElementById('charWeaponDesc').textContent = d.weaponDesc;
+
+            // 更新屬性條
+            d.stats.forEach((val, i) => {
+                document.getElementById(`statVal${i + 1}`).textContent = `${val} / 100`;
+                document.getElementById(`statBar${i + 1}`).style.width = `${val}%`;
+            });
+
+            // 更新切換按鈕樣式
+            document.querySelectorAll('.char-btn').forEach((btn, i) => {
+                if (i === idx) {
+                    btn.className = "char-btn px-4 py-2.5 rounded-lg bg-cyan-500 text-slate-950 font-bold text-xs font-mono transition shadow-[0_0_15px_rgba(0,240,255,0.4)]";
+                } else {
+                    btn.className = "char-btn px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:border-cyan-400 font-bold text-xs font-mono transition";
+                }
+            });
+
+            buildCharacterAndWeaponModels(idx);
+        }
+
+        function setShowcaseMode(mode) {
+            charState.mode = mode;
+            if (charRig) charRig.visible = (mode === 'character');
+            if (weaponRig) weaponRig.visible = (mode === 'weapon');
+
+            const cBtn = document.getElementById('modeCharBtn');
+            const wBtn = document.getElementById('modeWeaponBtn');
+            if (mode === 'character') {
+                cBtn.className = "px-3 py-1 rounded text-xs font-mono font-bold bg-cyan-500 text-slate-950 transition";
+                wBtn.className = "px-3 py-1 rounded text-xs font-mono font-bold text-slate-300 hover:text-white transition";
+            } else {
+                wBtn.className = "px-3 py-1 rounded text-xs font-mono font-bold bg-cyan-500 text-slate-950 transition";
+                cBtn.className = "px-3 py-1 rounded text-xs font-mono font-bold text-slate-300 hover:text-white transition";
+            }
+        }
+
+        function setCharPose(pose) {
+            charState.pose = pose;
+            document.querySelectorAll('.pose-btn').forEach(b => {
+                b.className = "pose-btn py-1.5 px-2 rounded bg-slate-900 border border-slate-700 text-slate-300 hover:border-cyan-400 text-xs font-mono transition";
+            });
+            document.getElementById(`pose-${pose}`).className = "pose-btn py-1.5 px-2 rounded bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-xs font-mono font-bold transition";
+            applyPoseAndExpression();
+        }
+
+        function setCharExpression(expr) {
+            charState.expr = expr;
+            document.querySelectorAll('.expr-btn').forEach(b => {
+                b.className = "expr-btn py-1.5 px-2 rounded bg-slate-900 border border-slate-700 text-slate-300 hover:border-rose-400 text-xs font-mono transition";
+            });
+            document.getElementById(`expr-${expr}`).className = "expr-btn py-1.5 px-2 rounded bg-rose-500/20 border border-rose-400 text-rose-300 text-xs font-mono font-bold transition";
+            applyPoseAndExpression();
+        }
+
+        function applyPoseAndExpression() {
+            if (!charParts.rightArm || !charParts.visor) return;
+            const data = CHARACTERS[charState.currentIdx];
+
+            // 姿勢調整
+            if (charState.pose === 'idle') {
+                charParts.rightArm.rotation.set(0, 0, -0.08);
+                charParts.leftArm.rotation.set(0, 0, 0.08);
+                charParts.head.rotation.set(0, 0, 0);
+            } else if (charState.pose === 'combat') {
+                charParts.rightArm.rotation.set(-1.35, -0.2, 0);
+                charParts.leftArm.rotation.set(-0.6, 0.4, 0.2);
+                charParts.head.rotation.set(0.08, -0.15, 0);
+            } else if (charState.pose === 'hack') {
+                charParts.rightArm.rotation.set(-0.9, 0.3, -0.2);
+                charParts.leftArm.rotation.set(-1.1, -0.3, 0.2);
+                charParts.head.rotation.set(-0.12, 0, 0.06);
+            }
+
+            // 表情／護目鏡變化
+            if (charState.expr === 'calm') {
+                charParts.visor.material.color.setHex(data.visorColor);
+                charParts.visor.scale.set(1, 1, 1);
+            } else if (charState.expr === 'overdrive') {
+                charParts.visor.material.color.setHex(0xFF0055);
+                charParts.visor.scale.set(1.12, 1.4, 1);
+            } else if (charState.expr === 'glitch') {
+                charParts.visor.material.color.setHex(0xFFB800);
+                charParts.visor.scale.set(0.85, 0.65, 1);
+            }
+        }
+
+        /* -------------------------------------------------------------------
+           6. 視口 D：3D 場景與建築探索器 (Scene Diorama 3D)
+        ------------------------------------------------------------------- */
+        let envScene, envCamera, envRenderer, envGroup, envLights = {};
+        let envState = { rotX: 0.35, rotY: -0.5, zoom: 18, sceneIdx: 0 };
+
+        function initSceneExplorer3D() {
+            const container = document.getElementById('scene-explorer-canvas');
+            if (!container) return;
+
+            envScene = new THREE.Scene();
+            envCamera = new THREE.PerspectiveCamera(48, container.clientWidth / container.clientHeight, 0.1, 150);
+            envRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            envRenderer.setSize(container.clientWidth, container.clientHeight);
+            envRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(envRenderer.domElement);
+
+            attachOrbitControls(container, envState, { minZoom: 10, maxZoom: 30 });
+
+            envLights.ambient = new THREE.AmbientLight(0x1E293B, 1.2);
+            envLights.main = new THREE.PointLight(0x00F0FF, 3, 45);
+            envLights.main.position.set(8, 12, 8);
+            envLights.sub = new THREE.PointLight(0xFF0055, 2.5, 45);
+            envLights.sub.position.set(-8, 6, -8);
+            envScene.add(envLights.ambient, envLights.main, envLights.sub);
+
+            buildDioramaScene(0);
+
+            window.addEventListener('resize', () => {
+                if (!container) return;
+                envCamera.aspect = container.clientWidth / container.clientHeight;
+                envCamera.updateProjectionMatrix();
+                envRenderer.setSize(container.clientWidth, container.clientHeight);
+            });
+        }
+
+        function buildDioramaScene(idx) {
+            if (envGroup) envScene.remove(envGroup);
+            envGroup = new THREE.Group();
+
+            // 微縮場景地基平台
+            const base = new THREE.Mesh(
+                new THREE.BoxGeometry(14, 0.8, 14),
+                new THREE.MeshStandardMaterial({ color: 0x0F172A, metalness: 0.7, roughness: 0.3 })
+            );
+            base.position.y = -0.4;
+            envGroup.add(base);
+
+            const gridHelper = new THREE.GridHelper(14, 14, 0x00F0FF, 0x1E293B);
+            gridHelper.position.y = 0.02;
+            envGroup.add(gridHelper);
+
+            if (idx === 0) {
+                // 場景 I：霓虹記憶當鋪街
+                const bMat = new THREE.MeshStandardMaterial({ color: 0x1E293B, metalness: 0.6, roughness: 0.4 });
+                const signCyan = new THREE.MeshBasicMaterial({ color: 0x00F0FF });
+                const signPink = new THREE.MeshBasicMaterial({ color: 0xFF0055 });
+
+                // 左側與右側建築
+                const leftB = new THREE.Mesh(new THREE.BoxGeometry(4, 7, 10), bMat);
+                leftB.position.set(-4.2, 3.5, 0);
+                const rightB = new THREE.Mesh(new THREE.BoxGeometry(4, 8.5, 10), bMat);
+                rightB.position.set(4.2, 4.25, 0);
+                envGroup.add(leftB, rightB);
+
+                // 懸掛全息招牌與天橋
+                const bridge = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.5, 1.8), bMat);
+                bridge.position.set(0, 4.5, -1);
+                const neon1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.8, 1.2), signCyan);
+                neon1.position.set(-2.05, 3.2, 2.2);
+                const neon2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 3.2, 1.4), signPink);
+                neon2.position.set(2.05, 4.0, 1.5);
+                envGroup.add(bridge, neon1, neon2);
+            } else if (idx === 1) {
+                // 場景 II：無重力數據聖殿
+                const coreMat = new THREE.MeshStandardMaterial({ color: 0x00F0FF, emissive: 0x00F0FF, emissiveIntensity: 0.6 });
+                const pillarMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.9, roughness: 0.1 });
+
+                const centralOrb = new THREE.Mesh(new THREE.IcosahedronGeometry(1.8, 1), coreMat);
+                centralOrb.position.set(0, 4.5, 0);
+                envGroup.add(centralOrb);
+
+                for (let i = 0; i < 6; i++) {
+                    const a = (i / 6) * Math.PI * 2;
+                    const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 8, 16), pillarMat);
+                    pillar.position.set(Math.cos(a) * 4.8, 4, Math.sin(a) * 4.8);
+                    envGroup.add(pillar);
+                }
+            } else {
+                // 場景 III：深淵機甲維修艙
+                const frameMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.4 });
+                const mechMat = new THREE.MeshStandardMaterial({ color: 0xFFB800, emissive: 0xB45309, emissiveIntensity: 0.3 });
+
+                // 龍門吊架
+                const gantryL = new THREE.Mesh(new THREE.BoxGeometry(0.8, 8, 0.8), frameMat);
+                gantryL.position.set(-3.5, 4, 0);
+                const gantryR = new THREE.Mesh(new THREE.BoxGeometry(0.8, 8, 0.8), frameMat);
+                gantryR.position.set(3.5, 4, 0);
+                const gantryTop = new THREE.Mesh(new THREE.BoxGeometry(8.2, 0.8, 1.2), frameMat);
+                gantryTop.position.set(0, 8, 0);
+
+                // 維修中的巨型機甲半身
+                const mechChest = new THREE.Mesh(new THREE.BoxGeometry(3.2, 3.6, 2.4), mechMat);
+                mechChest.position.set(0, 3.2, 0);
+                envGroup.add(gantryL, gantryR, gantryTop, mechChest);
+            }
+
+            envScene.add(envGroup);
+        }
+
+        function switch3DScene(idx) {
+            envState.sceneIdx = idx;
+            const info = SCENE_DATA[idx];
+            document.getElementById('sceneBadge').textContent = info.badge;
+            document.getElementById('sceneTitle').textContent = info.title;
+            document.getElementById('sceneDesc').textContent = info.desc;
+
+            document.querySelectorAll('.scene-btn').forEach((btn, i) => {
+                if (i === idx) {
+                    btn.className = "scene-btn px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs font-mono transition";
+                } else {
+                    btn.className = "scene-btn px-4 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:border-amber-400 font-bold text-xs font-mono transition";
+                }
+            });
+
+            buildDioramaScene(idx);
+        }
+
+        function setSceneLighting(mode) {
+            document.querySelectorAll('.light-btn').forEach(b => {
+                b.className = "light-btn px-3 py-1 rounded bg-slate-900 border border-slate-700 text-slate-300 text-xs font-mono";
+            });
+            document.getElementById(`light-${mode}`).className = "light-btn px-3 py-1 rounded bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-xs font-mono";
+
+            if (mode === 'cyber') {
+                envLights.main.color.setHex(0x00F0FF);
+                envLights.sub.color.setHex(0xFF0055);
+            } else if (mode === 'alert') {
+                envLights.main.color.setHex(0xFF0055);
+                envLights.sub.color.setHex(0xFF3300);
+            } else {
+                envLights.main.color.setHex(0xFFB800);
+                envLights.sub.color.setHex(0x00F0FF);
+            }
+        }
+
+        /* -------------------------------------------------------------------
+           7. 故事錄音播放、通行證生成與 Web Audio API 科幻合成音效
+        ------------------------------------------------------------------- */
+        function playStoryTransmission(idx) {
+            const log = STORY_LOGS[idx];
+            document.getElementById('transCode').textContent = log.code;
+            document.getElementById('transTitle').textContent = log.title;
+            document.getElementById('transTranscript').textContent = log.text;
+            document.getElementById('transmissionPlayer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            playBeepTone(520, 0.15);
+        }
+
+        function generateDiverPass() {
+            const input = document.getElementById('diverNameInput').value.trim() || 'GHOST_2184';
+            const randomNum = Math.floor(1000 + Math.random() * 9000);
+            document.getElementById('passDisplayName').textContent = input.toUpperCase();
+            document.getElementById('passDisplayId').textContent = `ID: #AE-${randomNum}-SYNC`;
+            document.getElementById('diverPassCard').classList.remove('hidden');
+            playBeepTone(780, 0.2);
+        }
+
+        function showSystemModal(title, body) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').textContent = body;
+            const modal = document.getElementById('customModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeSystemModal() {
+            const modal = document.getElementById('customModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // Web Audio API 合成環境低頻與互動音效 (無外部音檔依賴)
+        let audioCtx = null;
+        let ambientOsc = null;
+        let isAudioOn = false;
+
+        function toggleAmbientSound() {
+            const icon = document.getElementById('audioIcon');
+            const label = document.getElementById('audioLabel');
+
+            if (!isAudioOn) {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                ambientOsc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                ambientOsc.type = 'sawtooth';
+                ambientOsc.frequency.setValueAtTime(55, audioCtx.currentTime); // 深空低頻
+
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(140, audioCtx.currentTime);
+
+                gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+                ambientOsc.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+                ambientOsc.start();
+
+                isAudioOn = true;
+                icon.className = "fa-solid fa-volume-high text-cyan-400";
+                label.textContent = "AUDIO: ON";
+            } else {
+                if (ambientOsc) {
+                    ambientOsc.stop();
+                    ambientOsc.disconnect();
+                    ambientOsc = null;
+                }
+                isAudioOn = false;
+                icon.className = "fa-solid fa-volume-xmark text-rose-500";
+                label.textContent = "AUDIO: OFF";
+            }
+        }
+
+        function playBeepTone(freq, duration) {
+            if (!isAudioOn || !audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        /* -------------------------------------------------------------------
+           8. 滾動視差進場偵測 & 主渲染動畫迴圈 (Main Animation Loop)
+        ------------------------------------------------------------------- */
+        function initScrollReveal() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('active');
+                    }
+                });
+            }, { threshold: 0.12 });
+
+            document.querySelectorAll('.reveal-node').forEach(el => observer.observe(el));
+        }
+
+        function animateAll() {
+            requestAnimationFrame(animateAll);
+            const t = performance.now() * 0.001;
+
+            // 1. 首頁 3D 動畫更新
+            if (heroRenderer && heroScene && heroCamera) {
+                heroGroup.rotation.y += 0.002 + heroWarpSpeed * 0.03;
+                heroParticles.rotation.y -= 0.001;
+                heroCamera.position.x += (mouseNorm.x * 2.5 - heroCamera.position.x) * 0.05;
+                heroCamera.position.y += (4 + mouseNorm.y * 1.5 - heroCamera.position.y) * 0.05;
+                heroCamera.position.z += ((heroWarpSpeed > 0 ? 10 : 24) - heroCamera.position.z) * 0.08;
+                heroCamera.lookAt(0, 0, 0);
+                heroRenderer.render(heroScene, heroCamera);
+            }
+
+            // 2. 世界地圖 3D 動畫更新
+            if (mapRenderer && mapScene && mapCamera) {
+                mapState.rotY += 0.002;
+                mapRoot.rotation.y = mapState.rotY;
+                mapRoot.rotation.x = mapState.rotX;
+                mapNodes.forEach((node, i) => {
+                    node.rotation.y = t * 2 + i;
+                    node.position.y += Math.sin(t * 3 + i) * 0.004;
+                });
+                mapCamera.position.set(0, mapState.targetY + 2, mapState.zoom);
+                mapCamera.lookAt(0, mapState.targetY, 0);
+                mapRenderer.render(mapScene, mapCamera);
+            }
+
+            // 3. 角色與武器 3D 動畫更新
+            if (charRenderer && charScene && charCamera) {
+                if (charRig && charRig.visible) {
+                    charRig.rotation.y = charState.rotY;
+                    charRig.rotation.x = charState.rotX;
+                    // 呼吸浮動動態
+                    charRig.position.y = Math.sin(t * 2.2) * 0.08;
+                    if (charParts.backHalo) charParts.backHalo.rotation.z = t * 0.8;
+                }
+                if (weaponRig && weaponRig.visible) {
+                    weaponRig.rotation.y = charState.rotY + t * 0.6;
+                    weaponRig.rotation.x = charState.rotX;
+                }
+                charCamera.position.set(0, 0.2, charState.zoom);
+                charCamera.lookAt(0, 0, 0);
+                charRenderer.render(charScene, charCamera);
+            }
+
+            // 4. 場景建築 3D 動畫更新
+            if (envRenderer && envScene && envCamera && envGroup) {
+                envState.rotY += 0.0015;
+                envGroup.rotation.y = envState.rotY;
+                envGroup.rotation.x = envState.rotX;
+                envCamera.position.set(0, 5, envState.zoom);
+                envCamera.lookAt(0, 2.5, 0);
+                envRenderer.render(envScene, envCamera);
+            }
+        }
+
+        window.onload = function () {
+            initHero3D();
+            initWorldMap3D();
+            initCharacter3D();
+            initSceneExplorer3D();
+            initScrollReveal();
+            animateAll();
+        };
+    </script>
+</body>
+</html>
